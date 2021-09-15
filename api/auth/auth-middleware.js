@@ -33,55 +33,36 @@ const checkUsernameExists = async (req, res, next) => {
   try {
     const { username } = req.body;
     const user = await db.findBy({ username });
-    user
-      ? next(req.user)
-      : next({ message: "Invalid credentials", status: 401 });
+
+    if (user) {
+      req.user = user;
+      next();
+    } else {
+      next({ message: "Invalid credentials", status: 401 });
+    }
   } catch (error) {
     next(error);
   }
 };
 
 const validateRoleName = async (req, res, next) => {
-  /*
-    If the role_name in the body is valid, set req.role_name to be the trimmed string and proceed.
+  if (req.body.role_name && req.body.role_name.trim()) {
+    req.body.role_name = req.body.role_name.trim();
+    let role_name = req.body.role_name;
 
-    If role_name is missing from req.body, or if after trimming it is just an empty string,
-    set req.role_name to be 'student' and allow the request to proceed.
-
-    If role_name is 'admin' after trimming the string:
-    status 422
-    {
-      "message": "Role name can not be admin"
+    if (role_name === "admin") {
+      next({ status: 422, message: "Role name can not be admin" });
+    } else if (role_name.length > 32) {
+      next({
+        status: 422,
+        message: "Role name can not be longer than 32 chars",
+      });
     }
-
-    If role_name is over 32 characters after trimming the string:
-    status 422
-    {
-      "message": "Role name can not be longer than 32 chars"
-    }
-  */
-  try {
-    if (req.body.role_name && req.body.role_name.trim()) {
-      req.body.role_name = req.body.role_name.trim();
-      let role_name = req.body.role_name;
-
-      if (role_name === "admin") {
-        next({ status: 422, message: "Role name can not be admin" });
-      }
-      if (role_name.length > 32) {
-        next({
-          status: 422,
-          message: "Role name can not be longer than 32 chars",
-        });
-      }
-      req.role_name = role_name;
-      next();
-    } else {
-      req.body.role_name = "student";
-      next();
-    }
-  } catch (error) {
-    next(error);
+    req.role_name = role_name;
+    next();
+  } else {
+    req.body.role_name = "student";
+    next();
   }
 };
 

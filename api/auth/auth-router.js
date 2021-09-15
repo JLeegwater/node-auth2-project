@@ -1,7 +1,6 @@
 const router = require("express").Router();
 const { checkUsernameExists, validateRoleName } = require("./auth-middleware");
 
-const { JWT_SECRET } = require("../secrets");
 const bcrypt = require("bcryptjs");
 const tokenBuilder = require("./token-builder");
 const Users = require("../users/users-model");
@@ -22,23 +21,18 @@ router.post("/register", validateRoleName, (req, res, next) => {
 });
 
 router.post("/login", checkUsernameExists, (req, res, next) => {
-  let { username, password } = req.body;
+  let { password } = req.body;
+  const [user] = req.user;
 
-  Users.findBy({ username }) // it would be nice to have middleware do this
-    .then(([user]) => {
-      if (user && bcrypt.compareSync(password, user.password)) {
-        // give something back (the token)
-        // that is just as good as valid credentials
-        const token = tokenBuilder(user);
-        res.status(200).json({
-          message: `${user.username} is back!`,
-          token,
-        });
-      } else {
-        next({ status: 401, message: "Invalid Credentials" });
-      }
-    })
-    .catch(next);
+  if (user && bcrypt.compareSync(password, user.password)) {
+    const token = tokenBuilder(user);
+    res.status(200).json({
+      message: `${user.username} is back!`,
+      token,
+    });
+  } else {
+    next({ status: 401, message: "Invalid Credentials" });
+  }
 });
 
 module.exports = router;
